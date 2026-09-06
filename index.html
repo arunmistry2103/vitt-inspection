@@ -8,9 +8,11 @@
     :root{--navy:#102a43;--blue:#1677c8;--sky:#eaf5ff;--line:#d9e2ec;--ink:#243b53;--muted:#627d98;--green:#14804a;--red:#c43b3b;--amber:#c78312;--bg:#f4f7fa}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Arial,sans-serif}
     header{color:#fff;background:linear-gradient(120deg,#0b2239,#123e63);padding:14px max(24px,calc((100% - 1200px)/2));display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center}
-    header .header-logo{height:46px;width:auto;justify-self:start;background:#fff;border-radius:6px;padding:4px 8px}
-    header .header-title{text-align:center}
-    header h1{font-size:22px;margin:0;letter-spacing:.2px} header p{margin:4px 0 0;color:#cfe6f8}.tag{justify-self:end;border:1px solid #7fb4d8;border-radius:20px;padding:6px 12px;white-space:nowrap;color:#e8f5ff}
+    /* No logo in the bar: the title takes the middle column and the account block
+       the last one, named outright so nothing drifts left when one of them is
+       hidden. */
+    header .header-title{grid-column:2;text-align:center}
+    header h1{font-size:22px;margin:0;letter-spacing:.2px} header p{margin:4px 0 0;color:#cfe6f8}.tag{grid-column:3;justify-self:end;border:1px solid #7fb4d8;border-radius:20px;padding:6px 12px;white-space:nowrap;color:#e8f5ff}
     main{max-width:1200px;margin:24px auto;padding:0 18px 60px}.card{background:white;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 7px #243b5310;margin-bottom:20px;overflow:hidden}
     .details{padding:20px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.details .wide{grid-column:span 2}label{display:block;color:var(--muted);font-size:12px;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.35px}input,textarea{width:100%;border:1px solid #bcccdc;border-radius:5px;padding:9px 10px;font:inherit;color:var(--ink);background:#fff}input:focus,textarea:focus{outline:2px solid #9dd2ff;border-color:var(--blue)}
     .form-head{padding:22px 24px 6px;text-align:center;font-family:Georgia,serif;color:#050505}.form-head h2{margin:0;font-size:18px}.form-head h3{font-size:16px;margin:12px 0 16px}.paper-details{padding:0 24px 24px;color:#080808;font-family:Georgia,serif}.paper-line{display:grid;grid-template-columns:245px 1fr 205px;gap:28px;align-items:center;margin:13px 0}.paper-line.paper-line-2col{grid-template-columns:1.5fr 1fr}.paper-line.paper-line-1col{grid-template-columns:1fr}.paper-line.paper-line-even2col{grid-template-columns:1fr 1fr}.paper-field{display:flex;align-items:center;gap:5px;font-weight:bold;white-space:nowrap}.paper-field input,.paper-field select{flex:1 1 auto;border:0;border-bottom:1px solid #111;border-radius:0;padding:2px 3px;height:24px;min-width:60px;background:transparent;font:inherit;color:inherit}.paper-field input:focus,.paper-field select:focus{outline:0;border-bottom:2px solid var(--blue)}.vehicle-types{display:flex;align-items:center;gap:12px;font-weight:bold;white-space:nowrap}.vehicle-types span{display:flex;align-items:center;gap:7px}.vehicle-types input{appearance:none;width:21px;height:21px;margin:0;border:1px solid #111;border-radius:0;padding:0;cursor:pointer}.vehicle-types input:checked{background:var(--blue);box-shadow:inset 0 0 0 4px white}.paper-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:25px;border-top:1px solid #e6e6e6;margin-top:27px;padding-top:22px}.paper-bottom.paper-bottom-2col{grid-template-columns:1fr 1fr}
@@ -100,7 +102,7 @@
     .auth-link:hover{background:none;color:#0b5da0}
     #authCode{letter-spacing:6px;font-size:18px;text-align:center;font-weight:700}
     /* ---- Signed-in user in the header ---- */
-    .header-user{justify-self:end;display:flex;align-items:center;gap:10px;min-width:0;max-width:100%;overflow:hidden}
+    .header-user{grid-column:3;justify-self:end;display:flex;align-items:center;gap:10px;min-width:0;max-width:100%;overflow:hidden}
     .header-user .who{display:flex;flex-direction:column;align-items:flex-end;min-width:0}
     .header-user .who b,.header-user .who>span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .header-user .who b{font-size:13px;color:#fff}
@@ -147,7 +149,7 @@
   </style>
 </head>
 <body>
-  <header><img class="header-logo" src="logo.png" alt="Inox Air Products Ltd." /><div class="header-title"><h1>VITT Electrical Inspection Check List</h1><p>Vessel / tanker electrical safety inspection record</p></div><span class="tag" id="headerTag">Inspection Form</span><div class="header-user hidden" id="headerUser"><div class="who"><b id="headerUserName"></b><span class="role-chip hidden" id="headerRole">ADMIN</span><span id="headerUserEmail"></span></div><button type="button" id="logoutBtn">Log out</button></div></header>
+  <header><div class="header-title"><h1>VITT Electrical Inspection Check List</h1><p>Vessel / tanker electrical safety inspection record</p></div><span class="tag" id="headerTag">Inspection Form</span><div class="header-user hidden" id="headerUser"><div class="who"><b id="headerUserName"></b><span class="role-chip hidden" id="headerRole">ADMIN</span><span id="headerUserEmail"></span></div><button type="button" id="logoutBtn">Log out</button></div></header>
   <main>
     <div id="appError" class="app-error hidden"></div>
     <div id="storageWarning" class="storage-warning hidden">This browser is blocking local storage, so drafts and saved reports cannot be kept on this device. Allow site data / cookies for this page, or open it in a normal (non-private) window.</div>
@@ -169,7 +171,7 @@
           </div>
           <div class="auth-field" id="emailField">
             <label for="authEmail">Email address</label>
-            <input type="email" id="authEmail" name="email" autocomplete="username" placeholder="you@example.com" />
+            <input type="email" id="authEmail" name="email" autocomplete="username" placeholder="you@inoxap.com" />
           </div>
           <div class="auth-field hidden" id="codeField">
             <label for="authCode">6-digit code from your email</label>
@@ -783,7 +785,7 @@
     }
 
     // ---- Talking to the server ----
-    const GEO_ACTIONS={signup:1,login:1,submit:1,update:1,'delete':1,forgotPassword:1,resetPassword:1};
+    const GEO_ACTIONS={signup:1,login:1,submit:1,update:1,'delete':1,forgotPassword:1,resetPassword:1,verifySignup:1};
     function api(action,payload){
       if(!syncEnabled())return Promise.reject(new Error('This app has no server address set, so accounts and shared reports are switched off.'));
       const collect=GEO_ACTIONS[action]?getGeo():Promise.resolve(null);
@@ -792,7 +794,12 @@
         return fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
       }).then(function(res){return res.json()}).then(function(res){
         if(res&&res.needLogin){forceLogout(res.error||'Your login has expired. Please log in again.');throw new Error(res.error||'login required');}
-        if(!res||!res.ok)throw new Error((res&&res.error)||'The server could not complete that request.');
+        if(!res||!res.ok){
+          // Carry the whole answer on the error: a refused login may be telling us
+          // the address has never been confirmed, and the form needs to know.
+          const e=new Error((res&&res.error)||'The server could not complete that request.');
+          e.res=res;throw e;
+        }
         return res;
       },function(err){
         if(err instanceof Error)throw err;
@@ -1158,6 +1165,8 @@
     // on. Leave it empty and the app behaves exactly as before (phone-only storage).
     const SYNC_URL='https://script.google.com/macros/s/AKfycbxFxJRMMFVMjwrxnzMFDbi9zMNlNWnNk41sO136FRojuE7FuZJcNTeNmSxtTY3kjWvp/exec';
     const SYNC_TOKEN='vitt-hazira-2026';
+    // Must match ALLOWED_DOMAIN in Code.gs. Only these addresses may sign up.
+    const ALLOWED_DOMAIN='inoxap.com';
     function syncEnabled(){return !!SYNC_URL;}
     function getSyncQueue(){try{return JSON.parse(lsGet('vittSyncQueue')||'[]')}catch(e){return []}}
     function setSyncQueue(q){lsSet('vittSyncQueue',JSON.stringify(q));}
@@ -1349,18 +1358,22 @@
       printWithTitle(d?`VITT_${v}_${d}`:`VITT_${v}`);
     };
     // ---- Log in / create account ----
-    // Four stages share one form: logging in, creating an account, and the two
-    // halves of a forgotten password (ask for a code, then set the new password).
+    // Five stages share one form: logging in, creating an account, confirming the
+    // address that account was made with, and the two halves of a forgotten password.
     const AUTH_STAGES={
       login:{tabs:true,name:false,email:true,code:false,password:true,confirm:false,
         title:'Log in to continue',sub:'Every inspection is recorded against your name.',
         submit:'Log in',busy:'Logging in…',passwordLabel:'Password',fill:'current-password'},
       signup:{tabs:true,name:true,email:true,code:false,password:true,confirm:false,
-        title:'Create your account',sub:'Use your own email — every report you submit is filed under it.',
+        title:'Create your account',sub:'Use your @'+ALLOWED_DOMAIN+' company email — every report you submit is filed under it.',
         submit:'Create account',busy:'Creating account…',passwordLabel:'Password',fill:'new-password'},
       forgot:{tabs:false,name:false,email:true,code:false,password:false,confirm:false,
         title:'Forgotten your password?',sub:'Type your email address and we will send you a 6-digit code.',
         submit:'Send me a code',busy:'Sending…',passwordLabel:'Password',fill:'current-password'},
+      confirm:{tabs:false,name:false,email:false,code:true,password:false,confirm:false,
+        title:'Confirm your email address',
+        sub:'A 6-digit code has been sent to your company email. Type it in to finish creating your account.',
+        submit:'Confirm and continue',busy:'Checking…',passwordLabel:'Password',fill:'current-password'},
       verify:{tabs:false,name:false,email:false,code:true,password:true,confirm:true,
         title:'Choose a new password',sub:'Enter the code from the email, then the password you want to use from now on.',
         submit:'Save new password',busy:'Saving…',passwordLabel:'New password',fill:'new-password'}
@@ -1391,11 +1404,12 @@
       document.getElementById('authPassword').setAttribute('autocomplete',s.fill);
       // Which account the code was sent to, so nobody types it against the wrong one.
       const whoFor=document.getElementById('authWhoFor');
-      whoFor.classList.toggle('hidden',mode!=='verify');
-      if(mode==='verify')whoFor.innerHTML='Code sent to <b>'+escapeHtml(resetEmail)+'</b>';
+      const onCode=(mode==='verify'||mode==='confirm');
+      whoFor.classList.toggle('hidden',!onCode);
+      if(onCode)whoFor.innerHTML='Code sent to <b>'+escapeHtml(resetEmail)+'</b>';
       document.getElementById('forgotLink').classList.toggle('hidden',mode!=='login');
       document.getElementById('backToLogin').classList.toggle('hidden',mode==='login'||mode==='signup');
-      document.getElementById('resendCode').classList.toggle('hidden',mode!=='verify');
+      document.getElementById('resendCode').classList.toggle('hidden',!onCode);
       // Never leave a password or code lying in a box the person cannot see.
       if(!s.password)document.getElementById('authPassword').value='';
       if(!s.confirm)document.getElementById('authPassword2').value='';
@@ -1410,6 +1424,17 @@
     };
     document.getElementById('backToLogin').onclick=()=>setAuthMode('login');
     document.getElementById('resendCode').onclick=()=>{
+      // Confirming a new account and resetting a password both land on the code
+      // box, and each needs its own code sent again.
+      if(authMode==='confirm'){
+        const btn=document.getElementById('resendCode');
+        btn.disabled=true;
+        api('resendSignupCode',{email:resetEmail})
+          .then(res=>showAuthMsg(res.message||'A new code has been sent.','info'))
+          .catch(err=>showAuthMsg(err.message||'Could not send another code.','error'))
+          .then(()=>{btn.disabled=false});
+        return;
+      }
       document.getElementById('authEmail').value=resetEmail;
       setAuthMode('forgot');
       showAuthMsg('Press "Send me a code" again to get a new one.','info');
@@ -1431,6 +1456,9 @@
       const code=document.getElementById('authCode').value.trim();
 
       if(authMode==='forgot'&&!email){showAuthMsg('Please enter your email address.','error');return;}
+      if(authMode==='confirm'&&!/^\d{6}$/.test(code)){
+        showAuthMsg('Please type the 6-digit code from the email.','error');return;
+      }
       if(authMode==='verify'){
         if(!/^\d{6}$/.test(code)){showAuthMsg('Please type the 6-digit code from the email.','error');return;}
         if(password.length<6){showAuthMsg('The new password must be at least 6 characters.','error');return;}
@@ -1440,18 +1468,37 @@
         showAuthMsg('Please enter your email address and password.','error');return;
       }
       if(authMode==='signup'&&!name){showAuthMsg('Please enter your full name.','error');return;}
+      // Company addresses only. The server decides for certain - this is here so
+      // somebody is told before they have typed out a password.
+      if(authMode==='signup'&&!email.toLowerCase().endsWith('@'+ALLOWED_DOMAIN)){
+        showAuthMsg('Only @'+ALLOWED_DOMAIN+' addresses can create an account. Please use your company email.','error');return;
+      }
 
       const btn=document.getElementById('authSubmit');
       const stage=authMode;
       btn.disabled=true;btn.textContent=AUTH_STAGES[stage].busy;
       if(stage!=='forgot')showAuthMsg('Checking with the server — this also asks for your location.','info');
 
+      // Which call each stage makes, and with what. Signing up is the odd one: it
+      // answers with "now confirm the address" instead of a login.
+      const CALL={login:'login',signup:'signup',verify:'resetPassword',confirm:'verifySignup'};
+      const ARGS={
+        login:{email:email,password:password},
+        signup:{name:name,email:email,password:password},
+        verify:{email:resetEmail,code:code,password:password},
+        confirm:{email:resetEmail,code:code}
+      };
       const work=stage==='forgot'
         ? sendResetCode(email)
-        : api(stage==='verify'?'resetPassword':stage,
-            stage==='verify'?{email:resetEmail,code:code,password:password}
-                            :{name:name,email:email,password:password})
+        : api(CALL[stage],ARGS[stage])
             .then(res=>{
+              if(res.needVerify){
+                resetEmail=res.email||email;
+                setAuthMode('confirm',true);
+                showAuthMsg(res.message||'A code has been sent to that address.','info');
+                document.getElementById('authCode').focus();
+                return;
+              }
               setSession(res.session,res.user);
               document.getElementById('authPassword').value='';
               document.getElementById('authPassword2').value='';
@@ -1461,6 +1508,15 @@
             });
 
       work.catch(err=>{
+        // Logging in to an account whose address was never confirmed: send them
+        // to the code box rather than leaving them stuck on a refusal.
+        if(err&&err.res&&err.res.needVerify){
+          resetEmail=err.res.email||email;
+          setAuthMode('confirm',true);
+          showAuthMsg(err.message,'error');
+          document.getElementById('authCode').focus();
+          return;
+        }
         showAuthMsg(err.message||'Could not complete that. Please try again.','error');
       }).then(()=>{btn.disabled=false;btn.textContent=authButtonLabel();});
     });
