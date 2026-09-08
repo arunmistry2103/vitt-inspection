@@ -59,9 +59,10 @@
     .report-filters{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
     .report-filters .field{display:flex;flex-direction:column;gap:5px}
     .report-filters label{margin:0}
-    .report-filters select,.report-filters input[type=date]{min-width:170px;border:1px solid #bcccdc;border-radius:5px;padding:8px 10px;font:inherit;color:var(--ink);background:#fff}
+    .report-filters select,.report-filters input[type=date],.report-filters input[type=text]{min-width:170px;border:1px solid #bcccdc;border-radius:5px;padding:8px 10px;font:inherit;color:var(--ink);background:#fff}
     .report-filters select:focus,.report-filters input:focus{outline:2px solid #9dd2ff;border-color:var(--blue)}
     .report-filters button{height:38px}
+    #filterVehicle{text-transform:uppercase}#filterVehicle::placeholder{text-transform:none}
     .field-error{color:var(--red);font-size:12.5px;font-weight:700;margin:-6px 0 6px}
     .invalid{outline:2px solid var(--red);outline-offset:2px;border-radius:3px;background:#fff6f6}
     .vehicle-types.invalid{padding:3px 6px;background:#fff6f6}
@@ -259,6 +260,7 @@
       <div class="subheader"><button type="button" id="backFromReports">← Back</button><h2>Tanker Reports</h2></div>
       <div id="syncBanner" class="sync-banner hidden"></div>
       <div class="report-filters">
+        <div class="field"><label>Tanker number</label><input type="text" id="filterVehicle" placeholder="e.g. GJ21 or 3456" autocomplete="off" autocorrect="off" spellcheck="false" /></div>
         <div class="field"><label>Location</label><select id="filterLocation"><option value="">All locations</option></select></div>
         <div class="field"><label>From date</label><input type="date" id="filterFrom" /></div>
         <div class="field"><label>To date</label><input type="date" id="filterTo" /></div>
@@ -668,11 +670,14 @@
 
     // ---- Screens ----
     document.getElementById('goReports').onclick=()=>{showScreen('reportScreen');loadReports();};
+    // The box is only ever read, never written back, so a phone keyboard keeps its
+    // own copy of the word intact while the list narrows underneath.
+    document.getElementById('filterVehicle').addEventListener('input',renderReports);
     document.getElementById('filterLocation').addEventListener('change',renderReports);
     document.getElementById('filterFrom').addEventListener('change',renderReports);
     document.getElementById('filterTo').addEventListener('change',renderReports);
     document.getElementById('filterOwner').addEventListener('change',renderReports);
-    document.getElementById('clearFiltersBtn').addEventListener('click',()=>{document.getElementById('filterLocation').value='';document.getElementById('filterFrom').value='';document.getElementById('filterTo').value='';document.getElementById('filterOwner').value='';renderReports();});
+    document.getElementById('clearFiltersBtn').addEventListener('click',()=>{document.getElementById('filterVehicle').value='';document.getElementById('filterLocation').value='';document.getElementById('filterFrom').value='';document.getElementById('filterTo').value='';document.getElementById('filterOwner').value='';renderReports();});
     document.getElementById('refreshReportsBtn').addEventListener('click',function(){
       const btn=this;btn.disabled=true;btn.textContent='Refreshing…';
       loadReports().then(()=>{btn.disabled=false;btn.textContent='Refresh';});
@@ -948,12 +953,16 @@
     function renderReports(){
       const allReports=allSummaries();
       populateReportFilters(allReports);
+      const vehVal=plainVehicleNo(document.getElementById('filterVehicle').value);
       const locVal=document.getElementById('filterLocation').value;
       const fromVal=document.getElementById('filterFrom').value;
       const toVal=document.getElementById('filterTo').value;
       const ownerVal=document.getElementById('filterOwner').value;
       const me=currentUser?normEmail(currentUser.email):'';
       const reports=allReports.filter(r=>{
+        // Matched on letters and digits only, so "GJ21AA", "gj21-aa" and "GJ21 AA"
+        // all find the same tanker however the number was written down.
+        if(vehVal&&plainVehicleNo(r.vehicleNo).indexOf(vehVal)===-1)return false;
         if(locVal&&r.location!==locVal)return false;
         const d=reportDateStr(r);
         if(fromVal&&d<fromVal)return false;
@@ -1552,6 +1561,9 @@
     // Only the admin can open this, and the server refuses these two calls for
     // anybody else, so hiding the button is convenience rather than the lock.
     let adminLogs=[],adminUsers=[];
+    // Report id -> the Location chosen on that report, so an entry made before the log
+    // kept a Site column of its own can still be given a place name.
+    let adminReportSites={};
     function adminError(text){
       const box=document.getElementById('adminMsg');
       if(!text){box.classList.add('hidden');return;}
@@ -1594,7 +1606,8 @@
       document.getElementById('logTable').innerHTML='<p class="note">Loading activity…</p>';
       return Promise.all([
         api('logs',{limit:1000}).then(res=>{adminLogs=res.logs||[]},err=>{adminError(err.message||'Could not load the activity log.');adminLogs=[]}),
-        api('users',{}).then(res=>{adminUsers=res.users||[]},err=>{adminUsers=[]})
+        api('users',{}).then(res=>{adminUsers=res.users||[]},err=>{adminUsers=[]}),
+        api('list',{}).then(res=>{adminReportSites={};(res.reports||[]).forEach(r=>{if(r.id&&r.location)adminReportSites[r.id]=r.location});},err=>{adminReportSites={}})
       ]).then(()=>{populateLogFilters();renderLogs();renderUsers();});
     }
     function populateLogFilters(){
@@ -1621,6 +1634,9 @@
         return true;
       });
     }
+    // Newer entries carry the site the report was filed for; older ones predate that
+    // column, so the report they name is asked for its Location instead.
+    function logSite(l){return l.site||adminReportSites[l.reportId]||'';}
     function renderLogs(){
       const rows=filteredLogs();
       const today=new Date().toISOString().slice(0,10);
@@ -1631,24 +1647,21 @@
          <div class="stat-box"><b>${Object.keys(users).length}</b><span>People</span></div>
          <div class="stat-box"><b>${logins.filter(l=>String(l.time||'').slice(0,10)===today).length}</b><span>Logins today</span></div>
          <div class="stat-box"><b>${rows.filter(l=>actionKind(l.action)==='submit').length}</b><span>Reports filed</span></div>
-         <div class="stat-box"><b>${rows.filter(l=>l.lat!==null&&l.lat!==undefined).length}</b><span>With location</span></div>`;
+         <div class="stat-box"><b>${new Set(rows.map(logSite).filter(Boolean)).size}</b><span>Sites</span></div>`;
       const box=document.getElementById('logTable');
       if(!adminLogs.length){box.innerHTML='<p class="note">No activity has been recorded yet.</p>';return;}
       if(!rows.length){box.innerHTML='<p class="note">No activity matches these filters.</p>';return;}
       box.innerHTML='<div class="table-wrap"><table class="data"><thead><tr>'+
         '<th>When</th><th>Who</th><th>Did what</th><th>Vehicle / Report</th><th>Location</th><th>Device</th>'+
         '</tr></thead><tbody>'+rows.map(l=>{
-          const hasFix=l.lat!==null&&l.lat!==undefined&&l.lng!==null&&l.lng!==undefined;
-          const place=hasFix
-            ? `<a href="https://www.google.com/maps?q=${l.lat},${l.lng}" target="_blank" rel="noopener">${l.lat.toFixed(5)}, ${l.lng.toFixed(5)}</a>`+
-              (l.accuracy?`<span class="report-sub">±${Math.round(l.accuracy)} m</span>`:'')
-            : '<span class="no-gps">Not shared</span>';
+          const site=logSite(l);
+          const place=site?escapeHtml(site):'<span class="no-gps">—</span>';
           return `<tr>
             <td class="nowrap">${escapeHtml(formatDisplayDateTime(l.time))}</td>
             <td class="who"><b>${escapeHtml(l.name||'—')}</b><span>${escapeHtml(l.email||'')}</span></td>
             <td><span class="act-tag ${actionKind(l.action)}">${escapeHtml(l.action||'—')}</span></td>
             <td>${escapeHtml(l.vehicleNo||'—')}${l.reportId?`<span class="report-sub">${escapeHtml(l.reportId)}</span>`:''}</td>
-            <td class="nowrap">${place}</td>
+            <td>${place}</td>
             <td class="device-cell">${escapeHtml(shortDevice(l.device))}</td>
           </tr>`;
         }).join('')+'</tbody></table></div>';
