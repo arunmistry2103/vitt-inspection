@@ -7,7 +7,10 @@
   <style>
     :root{--navy:#102a43;--blue:#1677c8;--sky:#eaf5ff;--line:#d9e2ec;--ink:#243b53;--muted:#627d98;--green:#14804a;--red:#c43b3b;--amber:#c78312;--bg:#f4f7fa}
     *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Arial,sans-serif}
-    header{color:#fff;background:linear-gradient(120deg,#0b2239,#123e63);padding:14px max(24px,calc((100% - 1200px)/2));display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center}
+    /* The bar stays put at the top of the window while the checklist scrolls under
+       it, so the inspector can always see which form they are in and reach Log out.
+       It sits below the modal overlay's z-index so a confirm box still covers it. */
+    header{color:#fff;background:linear-gradient(120deg,#0b2239,#123e63);padding:14px max(24px,calc((100% - 1200px)/2));display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(11,34,57,.28)}
     /* No logo in the bar: the title takes the middle column and the account block
        the last one, named outright so nothing drifts left when one of them is
        hidden. */
@@ -146,7 +149,7 @@
     .status-tag.active{background:#e6f6ec;color:var(--green)}.status-tag.blocked{background:#fceaea;color:var(--red)}
     /* On a narrow screen the name would crowd the title, so only the button stays. */
     @media(max-width:900px){.header-user .who{display:none}}
-    @media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;background:#fff;font-size:11px}header{padding:12px max(24px,calc((100% - 1200px)/2))}main{max-width:none;margin:10px 0;padding:0}.card{box-shadow:none;margin-bottom:10px}.toolbar .actions{display:none}.subheader{display:none}.table-head,.row{grid-template-columns:35px 175px 1fr 170px}.row{padding:0}.remark{display:block!important}.remark textarea{border:0;padding:0;min-height:25px}.section h2{padding:8px 12px}.details{padding:12px;gap:8px}}
+    @media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;background:#fff;font-size:11px}header{padding:12px max(24px,calc((100% - 1200px)/2));position:static;box-shadow:none}main{max-width:none;margin:10px 0;padding:0}.card{box-shadow:none;margin-bottom:10px}.toolbar .actions{display:none}.subheader{display:none}.table-head,.row{grid-template-columns:35px 175px 1fr 170px}.row{padding:0}.remark{display:block!important}.remark textarea{border:0;padding:0;min-height:25px}.section h2{padding:8px 12px}.details{padding:12px;gap:8px}}
   </style>
 </head>
 <body>
@@ -260,7 +263,7 @@
       <div class="subheader"><button type="button" id="backFromReports">← Back</button><h2>Tanker Reports</h2></div>
       <div id="syncBanner" class="sync-banner hidden"></div>
       <div class="report-filters">
-        <div class="field"><label>Tanker number</label><input type="text" id="filterVehicle" placeholder="e.g. GJ21 or 3456" autocomplete="off" autocorrect="off" spellcheck="false" /></div>
+        <div class="field"><label>Tanker number</label><input type="text" id="filterVehicle" list="vehicleList" placeholder="e.g. GJ21 or 3456" autocomplete="off" autocorrect="off" spellcheck="false" /><datalist id="vehicleList"></datalist></div>
         <div class="field"><label>Location</label><select id="filterLocation"><option value="">All locations</option></select></div>
         <div class="field"><label>From date</label><input type="date" id="filterFrom" /></div>
         <div class="field"><label>To date</label><input type="date" id="filterTo" /></div>
@@ -934,7 +937,23 @@
 
     // ---- Reports list ----
     function reportDateStr(s){return s.inspectionDate||String(s.submittedAt||'').slice(0,10);}
+    // Every tanker already on file, offered under the box as you type. The list is
+    // rebuilt only when the set of tankers really changes; refreshing it on every
+    // keystroke makes the suggestions flicker shut as they are being read.
+    let vehicleListKey='';
+    function populateVehicleList(all){
+      // Sorted ignoring case, so a number keyed in as "gj21" sits beside its
+      // neighbours rather than dropping to the bottom of the list.
+      const nums=[...new Set(all.map(r=>(r.vehicleNo||'').trim()).filter(Boolean))]
+        .sort((a,b)=>a.toUpperCase().localeCompare(b.toUpperCase()));
+      const key=JSON.stringify(nums);
+      if(key===vehicleListKey)return;
+      vehicleListKey=key;
+      document.getElementById('vehicleList').innerHTML=
+        nums.map(n=>`<option value="${escapeHtml(n)}"></option>`).join('');
+    }
     function populateReportFilters(all){
+      populateVehicleList(all);
       const sel=document.getElementById('filterLocation');
       const current=sel.value;
       const locs=[...new Set(all.map(r=>r.location).filter(l=>l&&l!=='—'))].sort();
