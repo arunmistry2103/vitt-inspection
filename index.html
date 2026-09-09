@@ -71,7 +71,25 @@
     .vehicle-types.invalid{padding:3px 6px;background:#fff6f6}
     .sign-field .sign-file.invalid{outline-offset:3px}
     .field-note{color:#0b5da0;background:#eaf5ff;border:1px solid #bcdff5;padding:7px 10px;border-radius:6px;font-size:12.5px;font-weight:600;margin:-2px 0 10px}
-    .photo-label{margin-top:10px}.photo-input{display:block;font-size:12px}.photo-preview{max-width:180px;display:block;margin-top:8px;border-radius:6px;border:1px solid var(--line)}.photo-remove{margin-top:6px;font-size:12px;padding:4px 9px}
+    /* The defect photo, offered two ways. Each file input is hidden and the label
+       around it is what people see and tap, because Android otherwise draws a small
+       grey "Choose File" that says nothing about which one does what.
+         - "Take photo now" carries capture="environment", so Chrome goes straight
+           to the rear camera with no chooser in between.
+         - "Choose from phone" has no capture, so it opens the gallery for a picture
+           that was taken earlier.
+       Both are finger-sized so they can be hit wearing gloves, and they sit side by
+       side until the screen is too narrow, where they stack. */
+    .photo-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    /* text-transform and letter-spacing are undone deliberately: these are <label>
+       elements, and the form's label rule would otherwise SHOUT them in caps. */
+    .photo-btn{flex:1 1 150px;display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;margin-bottom:0;padding:11px 10px;border:1.5px solid var(--red);border-radius:6px;background:#fff;color:var(--red);font:700 13.5px/1.25 inherit;text-transform:none;letter-spacing:0;text-align:center;cursor:pointer}
+    .photo-btn.camera:active{background:#fdecec}
+    .photo-btn.gallery{border-color:#cbd7e2;color:var(--ink)}
+    .photo-btn.gallery:active{background:#eef3f8}
+    .photo-input{position:absolute;width:1px;height:1px;padding:0;border:0;margin:0;opacity:0;pointer-events:none}
+    .photo-hint{display:block;margin-top:5px;color:var(--muted);font-size:11.5px;font-weight:400}
+    .photo-preview{max-width:180px;display:block;margin-top:8px;border-radius:6px;border:1px solid var(--line)}.photo-remove{margin-top:6px;font-size:12px;padding:4px 9px}
     .status-badge{padding:6px 10px;border-radius:5px;font-weight:700;font-size:12px;display:inline-block}
     .status-badge.pass{background:var(--green);color:#fff}.status-badge.fail{background:var(--red);color:#fff}.status-badge.open{background:var(--amber);color:#fff}.status-badge.none{background:#e6eef5;color:var(--muted)}
     .remark-photo{max-width:220px;display:block;margin-top:8px;border-radius:6px;border:1px solid var(--line)}
@@ -364,7 +382,7 @@
     function makeRow(number,item,criteria,sub){
       rowDefs.push({number,item,criteria});
       const row=document.createElement('div');row.className='row'+(sub?' subrow':'');row.dataset.index=number;
-      row.innerHTML=`<div class="number">${number}</div><div class="item">${item}</div><div class="criteria">${criteria}</div><div class="status"><button type="button" data-status="pass">Pass</button><button type="button" data-status="fail">Fail</button><button type="button" data-status="open">Open</button></div><div class="remark hidden"><label>Fail remarks / corrective action *</label><textarea placeholder="Describe the deficiency and corrective action required."></textarea><label class="photo-label">Attach photo of defect (optional)</label><input type="file" accept="image/*" capture="environment" class="photo-input" /><img class="photo-preview hidden" alt="Attached photo preview" /><button type="button" class="photo-remove hidden">Remove photo</button></div>`;
+      row.innerHTML=`<div class="number">${number}</div><div class="item">${item}</div><div class="criteria">${criteria}</div><div class="status"><button type="button" data-status="pass">Pass</button><button type="button" data-status="fail">Fail</button><button type="button" data-status="open">Open</button></div><div class="remark hidden"><label>Fail remarks / corrective action *</label><textarea placeholder="Describe the deficiency and corrective action required."></textarea><div class="photo-actions"><label class="photo-btn camera"><span class="photo-btn-text">📷 Take photo now</span><input type="file" accept="image/*" capture="environment" class="photo-input" /></label><label class="photo-btn gallery"><span class="photo-gallery-text">🖼️ Choose from phone</span><input type="file" accept="image/*" class="photo-input" /></label></div><span class="photo-hint">Optional. The first button opens the camera straight away; the second one picks a picture already on the phone.</span><img class="photo-preview hidden" alt="Attached photo preview" /><button type="button" class="photo-remove hidden">Remove photo</button></div>`;
       list.appendChild(row);
     }
     mainItems.forEach(([item,criteria],i)=>makeRow(i+1,item,criteria));
@@ -406,8 +424,9 @@
         r.querySelector('.remark textarea').value='';
         const img=r.querySelector('.photo-preview');
         img.src='';img.classList.add('hidden');
-        r.querySelector('.photo-input').value='';
+        clearPhotoInputs(r);
         r.querySelector('.photo-remove').classList.add('hidden');
+        setPhotoButton(r,false);
         r.classList.remove('flash');
       });
       update();
@@ -426,8 +445,8 @@
         return;
       }
       if(e.target.matches('.photo-remove')){
-        const row=e.target.closest('.row');const preview=row.querySelector('.photo-preview');const fileInput=row.querySelector('.photo-input');
-        preview.src='';preview.classList.add('hidden');fileInput.value='';e.target.classList.add('hidden');save();
+        const row=e.target.closest('.row');const preview=row.querySelector('.photo-preview');
+        preview.src='';preview.classList.add('hidden');clearPhotoInputs(row);e.target.classList.add('hidden');setPhotoButton(row,false);save();
         return;
       }
     });
@@ -467,13 +486,28 @@
         }else viaImage();
       });
     }
+    // Both buttons say what tapping them does next: attach the first photo, or
+    // replace the one already there.
+    function setPhotoButton(row,hasPhoto){
+      const cam=row.querySelector('.photo-btn-text');
+      if(cam)cam.textContent=hasPhoto?'📷 Retake photo':'📷 Take photo now';
+      const gal=row.querySelector('.photo-gallery-text');
+      if(gal)gal.textContent=hasPhoto?'🖼️ Choose another':'🖼️ Choose from phone';
+    }
+    /** One point holds one photo, whichever of the two buttons brought it in. */
+    function clearPhotoInputs(row){row.querySelectorAll('.photo-input').forEach(i=>{i.value=''});}
     list.addEventListener('change',e=>{
       if(!e.target.matches('.photo-input'))return;
       const input=e.target;
       const file=input.files[0];const row=input.closest('.row');const preview=row.querySelector('.photo-preview');const removeBtn=row.querySelector('.photo-remove');
-      if(!file){preview.classList.add('hidden');preview.src='';removeBtn.classList.add('hidden');save();return;}
+      // Backing out of the camera or the gallery must not throw away a photo the
+      // other button already attached - only "Remove photo" takes one off.
+      if(!file)return;
+      // The two buttons share one slot, so the one just used wins and the other is
+      // emptied; otherwise the form would carry two files for a single point.
+      row.querySelectorAll('.photo-input').forEach(i=>{if(i!==input)i.value=''});
       compressImage(file,1280,0.7).then(function(dataUrl){
-        preview.src=dataUrl;preview.classList.remove('hidden');removeBtn.classList.remove('hidden');save();
+        preview.src=dataUrl;preview.classList.remove('hidden');removeBtn.classList.remove('hidden');setPhotoButton(row,true);save();
       }).catch(function(){
         input.value='';
         alert('Could not read that photo. Please take it again.');
@@ -492,7 +526,7 @@
     function save(){const data={schema:SCHEMA,fields:[...document.querySelectorAll('#inspectionForm input, #inspectionForm textarea, #inspectionForm select')].map(el=>({name:el.name,value:el.value,checked:el.checked,type:el.type})),rows:[...list.querySelectorAll('.row')].map(r=>{const img=r.querySelector('.photo-preview');return{status:(r.querySelector('.active')||{dataset:{}}).dataset.status||'',remark:r.querySelector('.remark textarea').value,image:(img&&!img.classList.contains('hidden'))?img.src:''}})};lsSet('vittInspection',JSON.stringify(data));}
     // Puts a saved set of answers back on the form. Used both for the draft kept on
     // this phone and for loading an already-submitted report so it can be edited.
-    function applyState(d){if(!d)return;(Array.isArray(d.fields)?d.fields:[]).forEach(x=>{const els=document.querySelectorAll(`[name="${x.name}"]`);els.forEach(el=>{if(el.type==='checkbox'){if(el.value===x.value)el.checked=!!x.checked}else if(el.value!==undefined)el.value=x.value})});if(d.schema===SCHEMA)(Array.isArray(d.rows)?d.rows:[]).forEach((x,i)=>{const r=list.querySelectorAll('.row')[i];if(!r)return;if(x.status){const b=r.querySelector(`[data-status="${x.status}"]`);if(b){b.className='active '+x.status;r.querySelector('.remark').classList.toggle('hidden',x.status!=='fail')}}r.querySelector('.remark textarea').value=x.remark||'';if(x.image){const img=r.querySelector('.photo-preview');img.src=x.image;img.classList.remove('hidden');r.querySelector('.photo-remove').classList.remove('hidden')}});
+    function applyState(d){if(!d)return;(Array.isArray(d.fields)?d.fields:[]).forEach(x=>{const els=document.querySelectorAll(`[name="${x.name}"]`);els.forEach(el=>{if(el.type==='checkbox'){if(el.value===x.value)el.checked=!!x.checked}else if(el.value!==undefined)el.value=x.value})});if(d.schema===SCHEMA)(Array.isArray(d.rows)?d.rows:[]).forEach((x,i)=>{const r=list.querySelectorAll('.row')[i];if(!r)return;if(x.status){const b=r.querySelector(`[data-status="${x.status}"]`);if(b){b.className='active '+x.status;r.querySelector('.remark').classList.toggle('hidden',x.status!=='fail')}}r.querySelector('.remark textarea').value=x.remark||'';if(x.image){const img=r.querySelector('.photo-preview');img.src=x.image;img.classList.remove('hidden');r.querySelector('.photo-remove').classList.remove('hidden');setPhotoButton(r,true)}});
       // The pump switch has to be re-applied after the rows, so a tanker saved with
       // no pump comes back with those points greyed out again.
       setPumpMounted(pumpFlag.value,true);
