@@ -705,6 +705,24 @@
 
     // ---- Helpers ----
     function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    // A report comes back from the server as whatever was stored for it, and a
+    // colleague could have stored anything. Everything shown on screen therefore
+    // goes through escapeHtml above, and the two things that are not plain text -
+    // a photo and a result - go through these instead.
+    //
+    // A picture is only ever one this app made (a data: image) or one fetched over
+    // https. Anything else - a javascript: address, a data:text/html page - is
+    // dropped and no picture is drawn.
+    function safeImageSrc(value){
+      const s=String(value==null?'':value).trim();
+      if(/^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=\s]*$/i.test(s))return s;
+      if(/^https:\/\/[^\s"'<>]+$/i.test(s))return s;
+      return '';
+    }
+    // A result is one of four words. It is written into a class attribute, so
+    // anything else becomes nothing at all rather than being trusted.
+    const RESULT_WORDS={pass:1,fail:1,open:1,na:1};
+    function safeStatus(value){const s=String(value==null?'':value);return RESULT_WORDS[s]?s:'';}
     // Dates are stored as yyyy-mm-dd (sortable, and what the Sheet wants) but always
     // shown to people as "5 Sep 2026".
     const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -894,7 +912,7 @@
         <div class="paper-line paper-line-2col"><div class="paper-field">Transporter Name : <input readonly value="${escapeHtml(transporter)}"/></div><div class="paper-field">Inspection Date: <input readonly value="${escapeHtml(formatDisplayDate(f.inspectionDate))}"/></div></div>
         <div class="paper-line paper-line-even2col"><div class="paper-field">Driver Name : <input readonly value="${escapeHtml(f.driverName||'')}"/></div><div class="paper-field">Location : <input readonly value="${escapeHtml(location)}"/></div></div>
         <div class="paper-bottom paper-bottom-2col"><div class="paper-field">Inspector Name: <input readonly value="${escapeHtml(inspector)}"/></div><div class="paper-field">Inspector Department: <input readonly value="${escapeHtml(dept)}"/></div></div>
-        <div class="paper-line paper-line-2col sign-line"><div class="paper-field">Inspector Sign: ${f.inspectorSign?`<img class="sign-image" src="${escapeHtml(f.inspectorSign)}" alt="Inspector signature" />`:'<span class="sign-space"></span>'}</div><div></div></div>
+        <div class="paper-line paper-line-2col sign-line"><div class="paper-field">Inspector Sign: ${safeImageSrc(f.inspectorSign)?`<img class="sign-image" src="${escapeHtml(safeImageSrc(f.inspectorSign))}" alt="Inspector signature" />`:'<span class="sign-space"></span>'}</div><div></div></div>
         <div class="note" style="margin:10px 0 0">Submitted ${escapeHtml(formatDisplayDateTime(report.submittedAt))}${report.ownerName||report.ownerEmail?' by '+escapeHtml(report.ownerName||report.ownerEmail):''}${report.editedAt?' · last edited '+escapeHtml(formatDisplayDateTime(report.editedAt)):''}</div>
       </div>`;
       const countsHtml=`<span class="pill pass">Pass: <b>${report.counts.pass}</b></span><span class="pill fail">Fail: <b>${report.counts.fail}</b></span><span class="pill open">Open: <b>${report.counts.open}</b></span>`;
@@ -908,10 +926,12 @@
         }
         const r=rows[i]||{};
         const sub=i>=mainItems.length&&i<mainItems.length+item14.subs.length;
-        const statusClass=r.status||'none';
-        const statusLabel=r.status==='na'?'N/A':(r.status?r.status.toUpperCase():'Not set');
-        const remarkHtml=(r.remark||r.image)?`<div class="remark"><label>Remark</label>${r.remark?`<div class="remark-text">${escapeHtml(r.remark)}</div>`:''}${r.image?`<img src="${r.image}" class="remark-photo" alt="Attached photo"/>`:''}</div>`:'';
-        rowsHtml+=`<div class="row${sub?' subrow':''}${r.status==='na'?' na-row':''}"><div class="number">${d.number}</div><div class="item">${escapeHtml(d.item)}</div><div class="criteria">${escapeHtml(d.criteria)}</div><div class="status"><span class="status-badge ${statusClass}">${statusLabel}</span></div>${remarkHtml}</div>`;
+        const status=safeStatus(r.status);
+        const statusClass=status||'none';
+        const statusLabel=status==='na'?'N/A':(status?status.toUpperCase():'Not set');
+        const photo=safeImageSrc(r.image);
+        const remarkHtml=(r.remark||photo)?`<div class="remark"><label>Remark</label>${r.remark?`<div class="remark-text">${escapeHtml(r.remark)}</div>`:''}${photo?`<img src="${escapeHtml(photo)}" class="remark-photo" alt="Attached photo"/>`:''}</div>`:'';
+        rowsHtml+=`<div class="row${sub?' subrow':''}${status==='na'?' na-row':''}"><div class="number">${d.number}</div><div class="item">${escapeHtml(d.item)}</div><div class="criteria">${escapeHtml(d.criteria)}</div><div class="status"><span class="status-badge ${statusClass}">${statusLabel}</span></div>${remarkHtml}</div>`;
       });
       return {formHtml,countsHtml,rowsHtml};
     }
