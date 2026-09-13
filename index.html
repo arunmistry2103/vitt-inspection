@@ -71,6 +71,11 @@
     .vehicle-types.invalid{padding:3px 6px;background:#fff6f6}
     .sign-field .sign-file.invalid{outline-offset:3px}
     .field-note{color:#0b5da0;background:#eaf5ff;border:1px solid #bcdff5;padding:7px 10px;border-radius:6px;font-size:12.5px;font-weight:600;margin:-2px 0 10px}
+    .field-note.vehicle-history{color:#8a5312;background:#fff1dc;border-color:#f0c68e}
+    .vehicle-history b{display:block;margin-bottom:5px;font-size:13px}
+    .vehicle-history ul{margin:0;padding-left:17px}
+    .vehicle-history li{margin:2px 0;font-weight:600;line-height:1.45}
+    .vehicle-history .vh-meta{font-weight:600;color:#9a6a2a}
     /* The defect photo, offered two ways. Each file input is hidden and the label
        around it is what people see and tap, because Android otherwise draws a small
        grey "Choose File" that says nothing about which one does what.
@@ -231,7 +236,7 @@
       <section class="card"><div class="form-head"><h2>Inox Air Products Ltd.</h2><h3>Electrical Inspection Checklist Cryogenic Tanker</h3></div><div class="paper-details">
         <div class="paper-line"><div class="paper-field">Vehicle No.: <input name="vehicleNo" class="vehicle-no" placeholder="GJ21-AA-3223" maxlength="16" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="next" /></div><div class="vehicle-types">Vehicle Type.: <span>LOX <input type="checkbox" name="vehicleType" value="LOX"></span><span>LIN <input type="checkbox" name="vehicleType" value="LIN"></span><span>LAR <input type="checkbox" name="vehicleType" value="LAR"></span><span>LMO <input type="checkbox" name="vehicleType" value="LMO"></span><span>LN2O <input type="checkbox" name="vehicleType" value="LN2O"></span></div><div></div></div>
         <div id="formError" class="field-error hidden"></div>
-        <div id="vehicleHistoryNote" class="field-note hidden"></div>
+        <div id="vehicleHistoryNote" class="field-note vehicle-history hidden"></div>
         <div class="paper-line paper-line-2col"><div class="paper-field">Transporter Name : <select name="transporterName">
           <option value="">Select transporter…</option>
           <option value="Amit Roadways">Amit Roadways</option>
@@ -606,19 +611,47 @@
     const deptSelect=document.querySelector('select[name="inspectorDepartment"]');const deptOtherLine=document.getElementById('deptOtherLine');
     function toggleDeptOther(){deptOtherLine.style.display=deptSelect.value==='__other__'?'':'none';}
     deptSelect.addEventListener('change',()=>{toggleDeptOther();save()});toggleDeptOther();
+    /* ---- Vehicle type: one only ---- */
+    // A tanker carries one product, so ticking LIN has to clear LOX rather than add
+    // to it. They stay checkboxes (square, the way the paper form draws them, and the
+    // way every save/restore path already reads them) and this listener does the
+    // clearing. save() is called here because the form's own "input" handler has
+    // already run by the time "change" arrives, so it recorded the pre-clear state.
+    const vehicleTypesBox=document.querySelector('.vehicle-types');
+    vehicleTypesBox.addEventListener('change',e=>{
+      const box=e.target;
+      if(!box||box.name!=='vehicleType')return;
+      if(box.checked)vehicleTypesBox.querySelectorAll('[name="vehicleType"]').forEach(o=>{if(o!==box)o.checked=false});
+      save();
+    });
     const vehicleNoInput=document.querySelector('[name="vehicleNo"]');const vehicleHistoryNote=document.getElementById('vehicleHistoryNote');
     const plainVehicleNo=s=>(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
     function checkVehicleHistory(){
       const v=plainVehicleNo(vehicleNoInput.value);
       if(!v){vehicleHistoryNote.classList.add('hidden');return;}
       // Looks across everybody's reports, not just the ones filled in on this phone.
-      const dates=allSummaries()
+      // Each past inspection is listed with who did it and where, so the inspector
+      // can tell a genuine repeat visit from the same tanker coming back elsewhere.
+      const past=allSummaries()
         .filter(r=>plainVehicleNo(r.vehicleNo)===v&&r.id!==editingId)
-        .map(r=>formatDisplayDate(r.inspectionDate||r.submittedAt));
-      if(dates.length){
-        vehicleHistoryNote.textContent=`This tanker was previously inspected on: ${[...new Set(dates)].join(', ')}`;
+        .map(r=>({
+          date:formatDisplayDate(r.inspectionDate||r.submittedAt)||'—',
+          inspector:(r.inspectorName||'').trim()||'—',
+          location:(r.location||'').trim()||'—'
+        }));
+      // The same report can arrive both from the server and from this phone's queue.
+      const seen={};const rows=past.filter(p=>{
+        const key=p.date+'|'+p.inspector+'|'+p.location;
+        if(seen[key])return false;seen[key]=true;return true;
+      });
+      if(rows.length){
+        vehicleHistoryNote.innerHTML=
+          `<b>This tanker has already been inspected ${rows.length>1?rows.length+' times':'once'}:</b><ul>`+
+          rows.map(p=>`<li>${escapeHtml(p.date)}<br><span class="vh-meta">Inspector: ${escapeHtml(p.inspector)} · Location: ${escapeHtml(p.location)}</span></li>`).join('')+
+          '</ul>';
         vehicleHistoryNote.classList.remove('hidden');
       }else{
+        vehicleHistoryNote.innerHTML='';
         vehicleHistoryNote.classList.add('hidden');
       }
     }
