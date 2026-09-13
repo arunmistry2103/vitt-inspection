@@ -113,10 +113,26 @@
     .auth-card .auth-sub{margin:0 0 18px;text-align:center;color:var(--muted);font-size:13px}
     .auth-tabs{display:flex;gap:8px;margin-bottom:20px;background:#eef3f8;border-radius:8px;padding:4px}
     .auth-tabs button{flex:1;background:transparent;color:var(--muted);padding:9px 8px}
-    .auth-tabs button.active{background:#fff;color:var(--navy);box-shadow:0 1px 3px #243b5320}
+    /* The chosen tab is light orange, not white. Against the pale grey track a
+       white tab is nearly invisible on a phone in daylight, and someone typing a
+       new password into what they think is the login tab only finds out when it
+       is refused. */
+    .auth-tabs button.active{background:#ffe7c6;color:#8a5312;box-shadow:0 1px 3px #8a531226}
     .auth-field{margin-bottom:14px}
     .auth-field label{margin-bottom:6px}
     .auth-field input{padding:11px 12px}
+    /* ---- "Show" on a password box ---- */
+    /* Typing a password blind on a phone keyboard is how most failed logins start,
+       so every password box carries a Show button that reveals what was typed.
+       The button sits inside the box on the right; the input is given room for it
+       so a long password never runs underneath. It is a real <button> with its own
+       tap target rather than an icon glued to the corner, because it has to be
+       hittable with gloves on. */
+    .pw-wrap{position:relative;display:block}
+    .pw-wrap input{padding-right:74px!important}
+    .pw-toggle{position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;color:var(--blue);border-radius:5px;padding:9px 10px;min-height:38px;font:700 12px inherit;text-transform:uppercase;letter-spacing:.3px}
+    .pw-toggle:hover{background:#eaf5ff;filter:none}
+    .pw-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
     .auth-submit{width:100%;padding:12px;font-size:14px;margin-top:4px}
     .auth-msg{border-radius:7px;padding:10px 12px;font-size:12.5px;font-weight:600;line-height:1.5;margin-bottom:14px}
     .auth-msg.error{background:#fceaea;border:1px solid #d98a8a;color:#8d2020}
@@ -206,11 +222,17 @@
           </div>
           <div class="auth-field" id="passwordField">
             <label for="authPassword" id="passwordLabel">Password</label>
-            <input type="password" id="authPassword" name="password" autocomplete="current-password" placeholder="At least 6 characters" />
+            <div class="pw-wrap">
+              <input type="password" id="authPassword" name="password" autocomplete="current-password" placeholder="At least 6 characters" />
+              <button type="button" class="pw-toggle" data-for="authPassword" aria-label="Show password">Show</button>
+            </div>
           </div>
           <div class="auth-field hidden" id="confirmField">
             <label for="authPassword2">Type the new password again</label>
-            <input type="password" id="authPassword2" autocomplete="new-password" placeholder="Repeat it" />
+            <div class="pw-wrap">
+              <input type="password" id="authPassword2" autocomplete="new-password" placeholder="Repeat it" />
+              <button type="button" class="pw-toggle" data-for="authPassword2" aria-label="Show password">Show</button>
+            </div>
           </div>
           <button type="submit" class="primary auth-submit" id="authSubmit">Log in</button>
         </form>
@@ -1503,6 +1525,34 @@
       authMsgBox.textContent=text;
     }
     function authButtonLabel(){return AUTH_STAGES[authMode].submit;}
+    /* ---- Show / hide a password ---- */
+    // Every box with a Show button next to it, wired the same way, so a password
+    // box added later only needs the markup.
+    function setPasswordShown(input,btn,shown){
+      input.type=shown?'text':'password';
+      btn.textContent=shown?'Hide':'Show';
+      btn.setAttribute('aria-label',shown?'Hide password':'Show password');
+    }
+    document.querySelectorAll('.pw-toggle').forEach(function(btn){
+      const input=document.getElementById(btn.dataset.for);
+      if(!input)return;
+      btn.addEventListener('click',function(){
+        const shown=input.type==='password';
+        setPasswordShown(input,btn,shown);
+        // The keyboard follows the caret, so put it back where it was rather than
+        // at the start, which is where changing the type would otherwise leave it.
+        const end=input.value.length;
+        input.focus();
+        try{input.setSelectionRange(end,end)}catch(e){}
+      });
+    });
+    /** Puts every password box back to dots. */
+    function hideAllPasswords(){
+      document.querySelectorAll('.pw-toggle').forEach(function(btn){
+        const input=document.getElementById(btn.dataset.for);
+        if(input)setPasswordShown(input,btn,false);
+      });
+    }
     function setAuthMode(mode,keepMsg){
       authMode=mode;
       const s=AUTH_STAGES[mode];
@@ -1531,6 +1581,8 @@
       if(!s.password)document.getElementById('authPassword').value='';
       if(!s.confirm)document.getElementById('authPassword2').value='';
       if(!s.code)document.getElementById('authCode').value='';
+      // Nor leave one on show once this screen is used for something else.
+      hideAllPasswords();
       if(!keepMsg)showAuthMsg('');
     }
     document.getElementById('tabLogin').onclick=()=>setAuthMode('login');
